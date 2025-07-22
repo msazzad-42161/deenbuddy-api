@@ -40,8 +40,7 @@ if __name__ == "__main__":
     
     # Test questions
     test_questions = [
-        "What is patience in Islam?",
-       "treatment with parents",
+        "find me the verse which is a dua from the children for their parents",
     ]
     
     for question in test_questions:
