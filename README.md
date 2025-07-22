@@ -16,6 +16,7 @@ DeenBuddy API is a RESTful backend built with Python and FastAPI. It provides en
 - ChromaDB
 - Pydantic
 - Uvicorn
+- Azure
 
 ## Getting Started
 
