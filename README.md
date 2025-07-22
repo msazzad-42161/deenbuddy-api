@@ -47,7 +47,7 @@ python main.py
 After running the API from the above code ☝️, run this 👇
 
 ```bash
-python main.py
+python test_deenbuddy_api.py
 ```
 
 Docs: [http://localhost:8000/docs](http://localhost:8000/docs)
