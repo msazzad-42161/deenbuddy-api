@@ -50,8 +50,6 @@ After running the API from the above code ☝️, run this 👇
 python test_deenbuddy_api.py
 ```
 
-Docs: [http://localhost:8000/docs](http://localhost:8000/docs)
-
 ## Project Structure
 
 ```
