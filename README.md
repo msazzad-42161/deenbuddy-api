@@ -4,6 +4,9 @@
 This project is a RESTful API backend for Islamic resources, implemented in Python. It provides endpoints for accessing Quranic content (including surahs, ayahs, translations, and tafseer), and includes modules for loading Quran and tafseer data. The codebase uses FastAPI as the web framework and supports environment-based configuration. There are also test scripts and a requirements file for dependencies. The project structure is flat, with main logic and data loaders in separate Python files. No advanced features (such as authentication, rate limiting, or database models) are present in the codebase as provided.
 DeenBuddy API is a RESTful backend built with Python and FastAPI. It provides endpoints for Islamic resources such as Quranic verses, prayer times, and Hadith collections. The API supports user authentication, bookmarking, and includes OpenAPI documentation.
 
+## Update
+ - We are not currently keeping the chromadb into github(will plan about it later)
+
 ## Features
 
 - Quran endpoints: surahs, ayahs, translations, tafsir

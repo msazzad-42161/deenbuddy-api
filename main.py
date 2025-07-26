@@ -107,9 +107,9 @@ def search_islamic_knowledge(question: str, n_results: int = 6, include_tafseer:
             metadata = results['metadatas'][0][i]
             distance = results['distances'][0][i]
             relevance = (1 - distance) * 100
-            
+
             category = metadata.get("category", "Unknown")
-            
+
             # Count categories
             if category == "Quran":
                 verse_count += 1
@@ -117,7 +117,19 @@ def search_islamic_knowledge(question: str, n_results: int = 6, include_tafseer:
                 tafseer_count += 1
                 if not include_tafseer:
                     continue  # Skip tafseer if not requested
-            
+
+            # Hadith support
+            hadith_fields = {}
+            if category == "Hadith":
+                # Add hadith-specific fields
+                hadith_fields = {
+                    "book": metadata.get("book", ""),
+                    "chapter": metadata.get("chapter", ""),
+                    "hadith_number": metadata.get("hadith_number", ""),
+                    "narrator": metadata.get("narrator", ""),
+                    "explanation": metadata.get("explanation", "")
+                }
+
             relevant_texts.append({
                 "text": doc,
                 "source": metadata.get("source", "Unknown"),
@@ -127,7 +139,8 @@ def search_islamic_knowledge(question: str, n_results: int = 6, include_tafseer:
                 "revelation_type": metadata.get("revelation_type", ""),
                 "tafseer_name": metadata.get("tafseer_name", ""),
                 "relevance": f"{relevance:.1f}%",
-                "distance": distance
+                "distance": distance,
+                **hadith_fields
             })
         
         # Sort by relevance (distance), but prioritize Quran verses
@@ -187,14 +200,20 @@ def generate_enhanced_response_with_tafseer(question: str, relevant_texts: List[
         full_reference = text_info.get("full_reference", "Unknown Reference")
         surah_name = text_info.get("surah_english_name", "")
         text_content = text_info["text"]
-        
-        # Prepare content for LLM in a more casual way
+
         if category == "Quran":
             sources_for_llm.append(f"📖 **From the Quran ({surah_name} {full_reference}):** \"{text_content}\"\n")
         elif category == "Tafseer":
             tafseer_name = text_info.get("tafseer_name", "Unknown Tafseer")
             sources_for_llm.append(f"💭 **Scholar's explanation ({tafseer_name} on {full_reference}):** \"{text_content}\"\n")
-    
+        elif category == "Hadith":
+            hadith_ref = text_info.get("full_reference", "")
+            hadith_number = text_info.get("hadith_number", "")
+            narrator = text_info.get("narrator", "")
+            explanation = text_info.get("explanation", "")
+            sources_for_llm.append(f"📜 **Hadith ({hadith_ref}, No. {hadith_number}, Narrator: {narrator}):** \"{text_content}\"\n")
+            if explanation:
+                sources_for_llm.append(f"📝 **Explanation:** {explanation}\n")
     user_query_context.extend(sources_for_llm)
     
     # Dynamic friendly opening based on current time
@@ -317,14 +336,20 @@ async def ask_islamic_question(request: QuestionRequest):
         
         # Format sources with complete information
         sources = []
-        for text in relevant_texts[:5]:  
+        for text in relevant_texts[:5]:
             source_info = {
                 "reference": text["full_reference"],
                 "category": text["category"],
                 "relevance": text["relevance"],
                 "surah_name": text.get("surah_name", ""),
                 "revelation_type": text.get("revelation_type", ""),
-                "tafseer_name": text.get("tafseer_name", "") if text["category"] == "Tafseer" else ""
+                "tafseer_name": text.get("tafseer_name", "") if text["category"] == "Tafseer" else "",
+                # Hadith fields
+                "book": text.get("book", "") if text["category"] == "Hadith" else "",
+                "chapter": text.get("chapter", "") if text["category"] == "Hadith" else "",
+                "hadith_number": text.get("hadith_number", "") if text["category"] == "Hadith" else "",
+                "narrator": text.get("narrator", "") if text["category"] == "Hadith" else "",
+                "explanation": text.get("explanation", "") if text["category"] == "Hadith" else ""
             }
             sources.append(source_info)
         
@@ -363,20 +388,24 @@ async def database_stats():
         for metadata in sample_results['metadatas'][0]:
             cat = metadata.get('category', 'Unknown')
             categories[cat] = categories.get(cat, 0) + 1
-            
+
             if cat == 'Quran':
                 rev_type = metadata.get('revelation_type', 'Unknown')
                 if rev_type != 'Unknown':
                     revelation_types[rev_type] = revelation_types.get(rev_type, 0) + 1
-                
+
                 surah_name = metadata.get('surah_english_name', 'Unknown')
                 if surah_name != 'Unknown':
                     surahs[surah_name] = surahs.get(surah_name, 0) + 1
-            
+
             elif cat == 'Tafseer':
                 tafseer_name = metadata.get('tafseer_name', 'Unknown')
                 if tafseer_name != 'Unknown':
                     tafseers[tafseer_name] = tafseers.get(tafseer_name, 0) + 1
+
+            elif cat == 'Hadith':
+                # Optionally, count books or narrators
+                pass
         
         scale_factor = total_count / sample_size if sample_size > 0 else 1
         
@@ -421,23 +450,36 @@ async def quick_search(query: str, limit: int = 8, category: str = "all"):
                 results = [r for r in results if r["category"] == "Quran"]
             elif category.lower() == "tafseer":
                 results = [r for r in results if r["category"] == "Tafseer"]
-        
+            elif category.lower() == "hadith":
+                results = [r for r in results if r["category"] == "Hadith"]
+
         formatted_results = []
         for r in results:
-            preview_length = 150 if r["category"] == "Tafseer" else 100
+            if r["category"] == "Tafseer":
+                preview_length = 150
+            elif r["category"] == "Hadith":
+                preview_length = 180
+            else:
+                preview_length = 100
             text_preview = r["text"][:preview_length] + "..." if len(r["text"]) > preview_length else r["text"]
-            
+
             result_item = {
                 "category": r["category"],
                 "reference": r["full_reference"],
                 "text_preview": text_preview,
                 "relevance": r["relevance"],
-                "surah": r.get("surah_name", "")
+                "surah": r.get("surah_name", ""),
+                # Hadith fields
+                "book": r.get("book", "") if r["category"] == "Hadith" else "",
+                "chapter": r.get("chapter", "") if r["category"] == "Hadith" else "",
+                "hadith_number": r.get("hadith_number", "") if r["category"] == "Hadith" else "",
+                "narrator": r.get("narrator", "") if r["category"] == "Hadith" else "",
+                "explanation": r.get("explanation", "") if r["category"] == "Hadith" else ""
             }
-            
+
             if r["category"] == "Tafseer":
                 result_item["tafseer_source"] = r.get("tafseer_name", "")
-            
+
             formatted_results.append(result_item)
         
         return {
