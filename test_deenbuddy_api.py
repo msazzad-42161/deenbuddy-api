@@ -40,7 +40,7 @@ if __name__ == "__main__":
     
     # Test questions
     test_questions = [
-        "quran or hadith rules on sisters haqooq",
+        "an incident of fights between the wives of the Prophet Muhammad, tell me about it in a story mode",
     ]
     
     for question in test_questions:
